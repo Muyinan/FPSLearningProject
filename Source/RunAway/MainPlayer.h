@@ -13,6 +13,7 @@ class UAnimMontage;
 class ARunAwayGameModeBase;
 class ATarget;
 class ATargetSpawner;
+class UInventoryUserWidget;
 
 UCLASS()
 class RUNAWAY_API AMainPlayer : public ACharacter
@@ -39,6 +40,7 @@ public:
 	void StartJump();
 	void StopJump();
 
+	// Fire相关
 	UFUNCTION()
 	void Fire();
 
@@ -51,6 +53,8 @@ public:
 	void BeginFire();
 	void EndFire();
 	FTimerHandle TimerHandleBetweenShot;
+
+	void SetEnableFire(bool);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float TimeBetweenShot = 0.243f;
@@ -101,4 +105,14 @@ public:
 
 private:
 	int cnt = 0;
+
+	bool m_bEnableFire = true;
+
+// 背包相关
+	UPROPERTY(EditAnywhere, Category = "InventoryUserWidget")
+	TSubclassOf<UInventoryUserWidget> m_inventoryWidgetClass;
+
+	UInventoryUserWidget* m_inventoryWidget;
+
+	void OpenOrCloseInventoryWidget();
 };

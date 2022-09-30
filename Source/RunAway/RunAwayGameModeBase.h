@@ -27,4 +27,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float MaxScale = 0.2f;
 
+public:
+	//enum class MY_GAME_PLAY_MODE {
+	//	NORMAL = 0,
+	//	NOMOVE = 1,
+	//	PAUSE = 2£¬
+	//};
 };
