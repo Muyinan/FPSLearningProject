@@ -13,7 +13,7 @@
 #include "TargetSpawner.h"
 #include "AmmoTarget.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "Inventory/InventoryUserWidget.h"
+#include "Inventory/InventoryComponent.h"
 
 // Sets default values
 AMainPlayer::AMainPlayer()
@@ -58,6 +58,9 @@ AMainPlayer::AMainPlayer()
 	FP_MuzzleLocation->SetRelativeLocation(FVector(0.2f, 48.4f, -10.6f));
 	//this->TakeDamage()
 	GunOffset = FVector(100.0f, 0.0f, 10.0f);
+
+	// 背包
+	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -106,7 +109,7 @@ void AMainPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("GetDamage", IE_Pressed, this, &AMainPlayer::ReduceHealth);
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &AMainPlayer::Reload);
 
-	PlayerInputComponent->BindAction("OpenOrCloseInventory", IE_Pressed, this, &AMainPlayer::OpenOrCloseInventoryWidget);	// 背包开关
+	//PlayerInputComponent->BindAction("OpenOrCloseInventory", IE_Pressed, this, &AMainPlayer::OpenOrCloseInventoryWidget);	// 背包开关
 }
 
 void AMainPlayer::MoveForward(float value)
@@ -207,8 +210,10 @@ void AMainPlayer::BeginFire()
 
 void AMainPlayer::EndFire()
 {
-	GetWorldTimerManager().ClearTimer(TimerHandleBetweenShot);
-	FP_Gun->Play(false);
+	if (m_bEnableFire) {
+		GetWorldTimerManager().ClearTimer(TimerHandleBetweenShot);
+		FP_Gun->Play(false);
+	}
 }
 
 void AMainPlayer::SetEnableFire(bool enableFire)
@@ -229,37 +234,4 @@ void AMainPlayer::GameRestart()
 void AMainPlayer::PrintLog()
 {
 	UE_LOG(LogTemp, Warning, TEXT("PrintLog has been called: %d"), ++cnt);
-}
-
-void AMainPlayer::OpenOrCloseInventoryWidget()
-{
-	if(m_inventoryWidgetClass)
-	{
-		if (!m_inventoryWidget) {
-			m_inventoryWidget = CreateWidget<UInventoryUserWidget>(GetWorld(), m_inventoryWidgetClass);
-			m_inventoryWidget->AddToViewport();
-			// 获取当前玩家(MainPlayer)的控制器
-			APlayerController* mainPlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-			mainPlayerController->SetShowMouseCursor(true);
-			FInputModeGameAndUI InputMode;
-			InputMode.SetHideCursorDuringCapture(false);
-			mainPlayerController->SetInputMode(InputMode);
-			mainPlayerController->SetIgnoreMoveInput(true);
-
-			SetEnableFire(false);
-		}
-		else {
-			m_inventoryWidget->RemoveFromParent();
-			m_inventoryWidget = nullptr;
-
-			APlayerController* mainPlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-			//UGameplayStatics::SetGamePaused(GetWorld(), false);
-			mainPlayerController->SetShowMouseCursor(false);
-			FInputModeGameOnly GameInputMode;
-			mainPlayerController->SetInputMode(GameInputMode);
-			mainPlayerController->SetIgnoreMoveInput(false);
-
-			SetEnableFire(true);
-		}
-	}
 }

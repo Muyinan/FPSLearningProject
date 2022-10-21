@@ -13,7 +13,7 @@ class UAnimMontage;
 class ARunAwayGameModeBase;
 class ATarget;
 class ATargetSpawner;
-class UInventoryUserWidget;
+class UInventoryComponent;
 
 UCLASS()
 class RUNAWAY_API AMainPlayer : public ACharacter
@@ -109,10 +109,5 @@ private:
 	bool m_bEnableFire = true;
 
 // 背包相关
-	UPROPERTY(EditAnywhere, Category = "InventoryUserWidget")
-	TSubclassOf<UInventoryUserWidget> m_inventoryWidgetClass;
-
-	UInventoryUserWidget* m_inventoryWidget;
-
-	void OpenOrCloseInventoryWidget();
+	UInventoryComponent* InventoryComponent;
 };
