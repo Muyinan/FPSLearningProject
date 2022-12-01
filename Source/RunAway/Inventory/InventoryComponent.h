@@ -6,25 +6,55 @@
 #include "Components/ActorComponent.h"
 #include "InventoryComponent.generated.h"
 
-class UInventoryItem;
+class AInventoryItem;
+class UInventoryHUD;
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class RUNAWAY_API UInventoryComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-private:
-	int InventorySize = 30;
-	TArray<UInventoryItem*> m_ItemList;
-	AActor* CurrentFocusItem;
-	APawn* OwnerPawn;
-	APlayerController* PlayerController;
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int InventorySize = 24;
+	UPROPERTY(BlueprintReadWrite)
+		AInventoryItem* CurrentFocusItem;
+	UPROPERTY(BlueprintReadWrite)
+		APlayerController* PlayerController;
+	UPROPERTY(BlueprintReadWrite)
+		APawn* OwnerPawn;
 
-private:
-	void AddItem(UInventoryItem* item);
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UInventoryHUD> BPHUDClass;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float ThrowSpeed = 300.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		bool bPauseGame = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UInventoryHUD* BPHUDRef;
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		TArray<AInventoryItem*> m_ItemList;
+
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	//	TSubclassOf<AInventoryItem> InventoryItemClass;
+
+	float TraceLength = 1000.f;
+protected:
+	UFUNCTION(BlueprintCallable)
+	void AddItem(AInventoryItem* item);
+
+	UFUNCTION(BlueprintCallable)
 	void RemoveItem(int idx, int num);
+
+	UFUNCTION(BlueprintCallable)
 	void SwapItem(int idx1, int idx2);
-	void ThrowItem(UInventoryItem* item);
+
+	UFUNCTION(BlueprintCallable)
+	void ThrowItem(AInventoryItem* item);
 public:	
 	// Sets default values for this component's properties
 	UInventoryComponent();

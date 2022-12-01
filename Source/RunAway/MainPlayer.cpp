@@ -59,8 +59,8 @@ AMainPlayer::AMainPlayer()
 	//this->TakeDamage()
 	GunOffset = FVector(100.0f, 0.0f, 10.0f);
 
-	// 背包
-	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
+	//// 背包
+	//InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
 
 // Called when the game starts or when spawned

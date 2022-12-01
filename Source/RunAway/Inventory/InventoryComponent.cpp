@@ -3,7 +3,11 @@
 
 #include "InventoryComponent.h"
 #include "InventoryItem.h"
-#include "KismetSystemLibrary.h"
+//#include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "DrawDebugHelpers.h"
+//#include "PickupBase.h"
+#include "InventoryHUD.h"
 
 // Sets default values for this component's properties
 UInventoryComponent::UInventoryComponent()
@@ -13,22 +17,26 @@ UInventoryComponent::UInventoryComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 
 	for (int i = 0; i < InventorySize; i++) {
-		UInventoryItem* emptyItem = NewObject<UInventoryItem>();
+		AInventoryItem* emptyItem = NewObject<AInventoryItem>();
 		m_ItemList.Add(emptyItem);
 	}
-
-	OwnerPawn = Cast<APawn>(this->GetOwner());
-	PlayerController = Cast<APlayerController>(OwnerPawn->GetController());
 }
-
 
 // Called when the game starts
 void UInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ...
+	OwnerPawn = Cast<APawn>(this->GetOwner());
+	PlayerController = Cast<APlayerController>(OwnerPawn->GetController());
 	
+	if (BPHUDClass != nullptr)
+	{
+		BPHUDRef = CreateWidget<UInventoryHUD>(OwnerPawn->GetWorld(), BPHUDClass);
+		BPHUDRef->AddToViewport();
+		PlayerController->SetInputMode(FInputModeGameOnly());
+		BPHUDRef->SetOwningPlayer(PlayerController);
+	}
 }
 
 
@@ -37,14 +45,33 @@ void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	// 射线检测面前是否有pickupBase的子类
+	FVector startLoc = OwnerPawn->GetActorLocation();
+	FVector lookatVec = UKismetMathLibrary::GetForwardVector(PlayerController->GetControlRotation());
+	FVector endLoc = startLoc + TraceLength * lookatVec;
+	FHitResult hitRes;
+	FCollisionObjectQueryParams objectQueryParams;
+	objectQueryParams.AddObjectTypesToQuery(ECollisionChannel::ECC_WorldDynamic);
+	//UKismetMathLibrary::LineTraceSingleForObjects(, startLocation, endLocation)
+	bool bIsTraced = GetWorld()->LineTraceSingleByObjectType(hitRes,startLoc, endLoc, objectQueryParams);
+	if (hitRes.Actor != nullptr){
+		CurrentFocusItem = Cast<AInventoryItem>(hitRes.Actor);
+	}
+	else {
+		CurrentFocusItem = nullptr;
+	}
+	BPHUDRef->CurItem = CurrentFocusItem;
+	//// 线段的Debug显示
+	//FColor Color = bIsTraced ? FColor::Green : FColor::Red;
+	//DrawDebugLine(GetWorld(), startLoc, endLoc, Color, false, 2.0f, 0, 2.0f);
 }
 
-void UInventoryComponent::AddItem(UInventoryItem* item)
+void UInventoryComponent::AddItem(AInventoryItem* item)
 {
 	// 找到物品在背包中的放入位置
 	int idx = -1;	
 	for (int i = m_ItemList.Num() - 1; i >= 0; i--) {
-		if (m_ItemList[i]->Name == "") {
+		if (!m_ItemList[i] || m_ItemList[i]->Name == "") {
 			idx = i;
 		}
 		else {
@@ -61,7 +88,12 @@ void UInventoryComponent::AddItem(UInventoryItem* item)
 		return;
 	}
 	else {
-		if (m_ItemList[idx]->Name != "") {	// 该格子有物品
+		if (!m_ItemList[idx]) {
+			AInventoryItem* emptyItem = NewObject<AInventoryItem>();
+			emptyItem->SetProperty(item->Name, item->Number, item->bCanStacking, item->Icon, item->Mesh, item->Tid);
+			m_ItemList[idx] = emptyItem;
+		}
+		else if (m_ItemList[idx]->Name != "") {	// 该格子有物品
 			m_ItemList[idx]->Number += item->Number;
 		}
 		else {
@@ -69,25 +101,44 @@ void UInventoryComponent::AddItem(UInventoryItem* item)
 		}
 	}
 
+	if (CurrentFocusItem->Name == "TimePause") {
+		bPauseGame = true;
+	}
+
 	// 销毁世界中的item
 	CurrentFocusItem->Destroy();
 }
 
-void UInventoryComponent::RemoveItem(int idx, int num) 
+void UInventoryComponent::RemoveItem(int idx, int num)
 {
 	if (num <= 0) return;
 
-	UInventoryItem* ItemRemove = NewObject<UInventoryItem>();
-	UInventoryItem* curItem = m_ItemList[idx];
-	if (num >= curItem->Number) {
-		ItemRemove = curItem;
-		m_ItemList[idx] = NewObject<UInventoryItem>();
-	}
-	else {
-		ItemRemove->SetProperty(curItem->Name, num, curItem->bCanStacking, curItem->Icon, curItem->Mesh, curItem->Tid);
-		curItem->Number -= num;
+	AInventoryItem* ItemRemove = NewObject<AInventoryItem>();
+	for (int i = 0; i < InventorySize; i++) {
+		AInventoryItem* curItem = m_ItemList[i];
+		if(curItem && curItem->Name != "")
+		{
+			if (num == 1) {
+				if (num >= curItem->Number) {
+					ItemRemove = curItem;
+					m_ItemList[i] = NewObject<AInventoryItem>();
+				}
+				else {
+					ItemRemove->SetProperty(curItem->Name, num, curItem->bCanStacking, curItem->Icon, curItem->Mesh, curItem->Tid);
+					curItem->Number -= num;
+				}
+			}
+			else {
+				ItemRemove = curItem;
+				m_ItemList[i] = NewObject<AInventoryItem>();
+			}
+			break;
+		}
 	}
 
+	if (ItemRemove && ItemRemove->Name == "TimePause") {
+		bPauseGame = false;
+	}
 	ThrowItem(ItemRemove);
 }
 
@@ -96,7 +147,14 @@ void UInventoryComponent::SwapItem(int idx1, int idx2)
 	Swap(m_ItemList[idx1], m_ItemList[idx2]);
 }
 
-void UInventoryComponent::ThrowItem(UInventoryItem* item)
+void UInventoryComponent::ThrowItem(AInventoryItem* item)
 {
-
+	FVector pawnPos = OwnerPawn->GetActorLocation();
+	FVector pawnForward = OwnerPawn->GetActorForwardVector();
+	FVector spawnPos = pawnPos + pawnForward * 100.f;
+	FActorSpawnParameters params;
+	params.Template = item;
+	AInventoryItem* throwItem = GetWorld()->SpawnActor<AInventoryItem>(AInventoryItem::StaticClass(), spawnPos, OwnerPawn->GetActorRotation(), params);
+	FVector throwVec = (pawnForward + FVector::UpVector) * ThrowSpeed;
+	if(throwItem) throwItem->StaticMeshComp->SetPhysicsLinearVelocity(throwVec, true);
 }

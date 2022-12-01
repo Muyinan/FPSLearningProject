@@ -103,11 +103,12 @@ public:
 
 	ATargetSpawner* TargetSpawner;
 
+	//// 背包相关
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	//	UInventoryComponent* InventoryComponent;
+
 private:
 	int cnt = 0;
 
 	bool m_bEnableFire = true;
-
-// 背包相关
-	UInventoryComponent* InventoryComponent;
 };

@@ -2,21 +2,37 @@
 
 
 #include "InventoryItem.h"
-#include "Engine/Texture2D.h"
-#include "Engine/StaticMesh.h"
+#include "Components/StaticMeshComponent.h"
 
-UInventoryItem::UInventoryItem()
+// Sets default values
+AInventoryItem::AInventoryItem()
 {
-	// Uid为0代表空物品
-	Name = "";
-	Number = 0;
-	bCanStacking = false;
-	Icon = nullptr;
-	Mesh = nullptr;
-	Tid = 0;
+ 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = true;
+
+	StaticMeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComp"));
+	RootComponent = StaticMeshComp;
+
+	StaticMeshComp->SetSimulatePhysics(true);
+
 }
 
-void UInventoryItem::SetProperty(FName name, int num, bool stacking, UTexture2D* icon, UStaticMesh* mesh, int id)
+// Called when the game starts or when spawned
+void AInventoryItem::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	if(Mesh)  StaticMeshComp->SetStaticMesh(Mesh);
+}
+
+// Called every frame
+void AInventoryItem::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+}
+
+void AInventoryItem::SetProperty(FName name, int num, bool stacking, UTexture2D* icon, UStaticMesh* mesh, int id)
 {
 	Tid = id;
 	Number = num;
